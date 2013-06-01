@@ -45,6 +45,8 @@ $lang = array_merge($lang, array(
 	'ALL'						=> 'All',
 	'ALL_CONTRIBUTIONS'			=> 'All contributions',
 	'ALL_SUPPORT'				=> 'All support topics',
+	'APPROVED'					=> 'Approved',
+	'APPROVED_BY'				=> 'Approved by',
 	'AUTHOR_BY'					=> 'By %s',
 
 	'BAD_RATING'				=> 'Rating attempt failed.',
@@ -80,6 +82,7 @@ $lang = array_merge($lang, array(
 	'CAT_SNIPPETS'				=> 'Snippets',
 	'CAT_STYLES'				=> 'Styles',
 	'CAT_TOOLS'					=> 'Tools',
+	'CLOSED'					=> 'Closed',
 	'CLOSED_BY'					=> 'Closed by',
 	'CLOSED_ITEMS'				=> 'Closed Items',
 	'COLORIZEIT_COLORS'         => 'Colour scheme',
@@ -125,13 +128,16 @@ $lang = array_merge($lang, array(
 	'HARD_DELETE'				=> 'Hard Delete',
 	'HARD_DELETE_EXPLAIN'		=> 'Select to permanently delete this item.',
 	'HARD_DELETE_TOPIC'			=> 'Hard Delete Topic',
+	'HOUR'						=> 'Hour',
 
 	'LANGUAGE_PACK'				=> 'Language Pack',
+	'LESS_THAN_A_MINUTE'		=> 'Less than a minute',
 	'LIST'						=> 'List',
 
 	'MAKE_CATEGORY_VISIBLE'		=> 'Make Category Visible',
 	'MANAGE'					=> 'Manage',
 	'MARK_CONTRIBS_READ'		=> 'Mark contributions read',
+	'MINUTE'					=> 'Minute',
 	'MOVE_CONTRIBS_TO'			=> 'Move Contributions to',
 	'MOVE_DOWN'					=> 'Move down',
 	'MOVE_SUBCATS_TO'			=> 'Move Subcategories to',
@@ -140,6 +146,7 @@ $lang = array_merge($lang, array(
 	'MY_CONTRIBUTIONS'			=> 'My Contributions',
 
 	'NAME'						=> 'Name',
+	'NEW_UNAPPROVED_POST'		=> 'New unapproved post',
 	'NEW_REVISION'				=> 'New Revision',
 	'NOT_AGREE'					=> 'I do not agree',
 	'NO_AUTH'					=> 'You are not authorised to see this page.',
@@ -156,12 +163,14 @@ $lang = array_merge($lang, array(
 	'ORDER'						=> 'Order',
 
 	'PARENT_CATEGORY'			=> 'Parent Category',
+	'PARENT_CONTRIBUTION'		=> 'Parent Contribution',
 	'PARENT_NOT_EXIST'			=> 'Parent does not exist.',
 	'POST_IP'					=> 'Post IP',
 	'PURGE_CACHE'				=> 'Purge Cache',
 
 	'QUEUE'						=> 'Queue',
 	'QUEUE_DISCUSSION'			=> 'Queue Discussion',
+	'QUEUE_STATS'				=> 'Queue Statistics',
 	'QUICK_ACTIONS'				=> 'Quick Actions',
 
 	'RATING'					=> 'Rating',

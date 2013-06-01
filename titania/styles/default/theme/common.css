@@ -8,6 +8,10 @@ h2.panel-name {
 	display: inline;
 }
 
+h3.clear-top {
+	margin-top: 5px;
+}
+
 h3.section-name {
 	font-size: 1.4em;
 	font-weight: normal;
@@ -32,7 +36,7 @@ h3.section-name {
 }
 
 .tabs a {
-	background: transparent url("{T_THEME_PATH}/images/tab_bg.gif") no-repeat 0 -29px;
+	background: #7fa3b9 url("{T_THEME_PATH}/images/tab_bg.gif") no-repeat 0 -29px;
 	border-bottom: 1px solid #FFFFFF;
 	position: relative;
 	display: block;
@@ -48,6 +52,7 @@ h3.section-name {
 }
 
 .tabs a:hover {
+	background-color: #577d94;
 	background-position: 0 -57px;
 	text-decoration: none;
 }
@@ -57,6 +62,7 @@ h3.section-name {
 }
 
 .tabs #activetab a {
+	background-color: #c6d8e5;
 	background-position: 0 0;
 	border-bottom-color: #C6D8E5;
 }
@@ -466,6 +472,14 @@ dd.revision-phpbb-version {
 	width: 20%;
 }
 
+#translations-panel dl dt {
+	width: 75%;
+}
+
+#translations-panel dl dt ul li {
+	padding: 2px 0;
+}
+
 ul.topiclist dd.revision-actions {
 	text-align: right;
 	width: 8%;
@@ -619,23 +633,29 @@ li.row dl.codebox dd {
 }
 
 /* Attention */
-#attention {
+.attention {
 	border-bottom-style: dashed;
 	border-bottom-width: 1px;
 	padding-top: 5px;
 }
 
-#attention td {
-	padding: 3px;
+.attention.last {
+	border-bottom: 0;
 }
 
-#attention .content {
+.attention .content {
 	font-size: 1.3em;
 	padding-bottom: 10px;
 }
 
+p.attention-closed {
+	background-color: #ECD5D8;
+	margin-right: 0;
+	padding: 3px;
+}
+
 /* Description diff */
-#report .content pre, #attention .content pre {
+#report .content pre, .attention .content pre {
 	font-family: inherit;
 	white-space: normal;
 }
@@ -655,8 +675,102 @@ li.row dl.codebox dd {
 	height: 185px;
 }
 
+/* Queue stats
+--------------------------------------------- */
+.fade { background: url("{T_THEME_PATH}/images/fade.png") repeat-y left bottom; }
+
+.stat-new {
+	background-color: #999999;
+	color: #20383C;
+}
+
+.stat-denied {
+	background-color: #A91F1F;
+	color: #250E0E;
+}
+
+.stat-approved {
+	background-color: #86AD32;
+	color: #333F1A;
+}
+
+#queue-stat-info {
+	font-family: Verdana, Helvetica, Arial;
+	font-size: 1.1em;
+}
+
+#queue-stat-info ul { margin-left: 15px; }
+#queue-activity { margin-left: 3px; }
+
+.stat-ratio span, .stat-day span, .day-list span {
+	display: block;
+	float: left;
+	font-family: Helvetica, Arial, Verdana;
+	text-align: center;
+	width: 20px;
+}
+
+.stat-ratio { width: 300px; }
+
+.stat-ratio span {
+	height: 16px;
+	padding: 2px 0;
+}
+
+.stat-day {
+	float: left;
+	height: 150px;
+	margin-right: 7px;
+}
+
+.stat-day span {
+	float: none;
+	margin-bottom: 1px;
+	position: relative;
+}
+
+.stat-day span strong {
+	font-weight: normal;
+	height: 10px;
+	left: 0;
+	margin-top: -5px;
+	position: absolute;
+	top: 50%;
+	width: 100%;
+}
+
+.day-list {
+	background-color: #FFF;
+	border-bottom: 1px dotted #B5BEBF;
+	border-top: 1px dotted #B5BEBF;
+	clear: both;
+	float: left;
+	margin-bottom: 15px;
+	padding: 4px 0;
+	position: relative;
+	top: 4px;
+}
+
+.day-list span { width: 27px; }
+
+.day-list span.pip {
+	background-color: #9DA1A3;
+	height: 3px;
+	margin-left: 50%;
+	margin-top: -4px;
+	width: 1px;
+}
+
+.legend {
+	border: 1px solid #FFF;
+	display: inline-block;
+	height: 10px;
+	width: 10px;
+}
+
 /* General
 --------------------------------------------- */
+.postbody.full { width: 100%; }
 
 /* ColorBox adjustments; primarily switching control buttons to top */
 #cboxLoadedContent {

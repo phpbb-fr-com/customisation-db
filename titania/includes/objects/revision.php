@@ -184,7 +184,8 @@ class titania_revision extends titania_database_object
 			'BBC_BBCODE_USAGE'		=> $this->revision_bbc_bbcode_usage,
 			'BBC_HELPLINE'			=> $this->revision_bbc_help_line,
 			'INSTALL_LEVEL'			=> ($this->install_level > 0) ? phpbb::$user->lang['INSTALL_LEVEL_' . $this->install_level] : '',
-			'DOWNLOADS'			=> isset($this->download_count) ? $this->download_count : 0,
+			'DOWNLOADS'				=> isset($this->download_count) ? $this->download_count : 0,
+			'HALF_TRANSLATIONS'		=> ceil(sizeof($this->translations) / 2),
 
 			'U_DOWNLOAD'		=> $this->get_url(),
 			'U_COLORIZEIT'      => $url_colorizeit,
@@ -217,12 +218,7 @@ class titania_revision extends titania_database_object
 			$translations = new titania_attachment(TITANIA_TRANSLATION, $this->revision_id);
 			$translations->store_attachments($this->translations);
 
-			foreach ($translations->parse_attachments($message = false) as $attachment)
-			{
-				phpbb::$template->assign_block_vars($tpl_block . '.translations', array(
-					'DISPLAY_ATTACHMENT'	=> $attachment,
-				));
-			}
+			$translations->parse_attachments($message = false, false, false, $tpl_block . '.translations', '');
 		}
 
 		phpbb::$template->assign_var('ICON_EDIT', '<img src="' . titania::$images_path . 'icon_edit.gif" alt="' . phpbb::$user->lang['EDIT'] . '" title="' . phpbb::$user->lang['EDIT'] . '" />');
@@ -377,6 +373,11 @@ class titania_revision extends titania_database_object
 				{
 					$this->contrib->change_status(TITANIA_CONTRIB_APPROVED);
 				}
+				else
+				{
+					// Add the revision to the Composer package
+					$this->update_composer_package();
+				}
 
 				// Update the revisions phpbb version table
 				$sql = 'UPDATE ' . TITANIA_REVISIONS_PHPBB_TABLE . '
@@ -384,7 +385,7 @@ class titania_revision extends titania_database_object
 					WHERE revision_id = ' . (int) $this->revision_id;
 				phpbb::$db->sql_query($sql);
 
-				$sql_ary['validation_date'] = titania::$time;
+				$sql_ary['validation_date'] = $this->validation_date = titania::$time;
 
 				// Update the contributions table if this is the newest validated revision
 				$sql = 'SELECT revision_id FROM ' . $this->sql_table . '
@@ -411,7 +412,9 @@ class titania_revision extends titania_database_object
 					WHERE revision_id = ' . (int) $this->revision_id;
 				phpbb::$db->sql_query($sql);
 
-				$sql_ary['validation_date'] = 0;
+				$sql_ary['validation_date'] = $this->validation_date= 0;
+				// Remove the revision from the Composer package
+				$this->update_composer_package('remove');
 			break;
 		}
 
@@ -514,6 +517,7 @@ class titania_revision extends titania_database_object
 		$attachment->attachment_id = $this->attachment_id;
 		$attachment->load();
 		$attachment->delete();
+		$this->update_composer_package('remove');
 
 		// Delete translations
 		// $translations = new titania_attachment(TITANIA_TRANSLATION, $this->revision_id);
@@ -534,7 +538,7 @@ class titania_revision extends titania_database_object
 			$queue = $this->get_queue();
 
 			// Only create the queue for revisions set as new
-			if ($queue === false && $this->revision_status == TITANIA_REVISION_NEW)
+			if ($queue === false && ($this->revision_status == TITANIA_REVISION_NEW || $this->revision_status == TITANIA_REVISION_ON_HOLD))
 			{
 				$queue = new titania_queue;
 			}
@@ -622,5 +626,30 @@ class titania_revision extends titania_database_object
 		}
 
 		return titania_url::build_url('download', array('id' => $this->attachment_id));
+	}
+
+	/**
+	 * Add/remove the revision from the Composer packages file.
+	 */
+	public function update_composer_package($mode = 'add')
+	{
+		titania::_include('tools/composer_package_manager', false, 'titania_composer_package_helper');
+		$package_helper = new titania_composer_package_helper();
+
+		if (!titania::$config->composer_vendor_name || !titania_types::$types[$this->contrib->contrib_type]->create_composer_packages || !$package_helper->packages_dir_writable())
+		{
+			return;
+		}
+		$package_manager = new titania_composer_package_manager($this->contrib->contrib_id, $this->contrib->contrib_name_clean, $this->contrib->contrib_type, $package_helper);
+
+		if ($mode == 'add')
+		{
+			$package_manager->add_release($this->revision_version, $this->attachment_id, true);
+		}
+		else
+		{
+			$package_manager->remove_release($this->revision_version);
+		}
+		$package_manager->submit();
 	}
 }

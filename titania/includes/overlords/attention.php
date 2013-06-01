@@ -28,6 +28,42 @@ class attention_overlord
 	);
 
 	/**
+	* Get the appropriate attention object for the attention item
+	*
+	* @param mixed $attention_id
+	* @param mixed $object_type
+	* @param mixed $object_id
+	*/
+	public static function get_attention_object($attention_id, $object_type = false, $object_id = false)
+	{
+		$data = self::load_attention($attention_id, $object_type, $object_id);
+
+		if (!$data)
+		{
+			return false;
+		}
+
+		switch ($data['attention_object_type'])
+		{
+			case TITANIA_POST:
+				titania::_include('objects/attention_types/post', false, 'titania_attention_post');
+				$object = new titania_attention_post();
+			break;
+
+			case TITANIA_CONTRIB:
+				titania::_include('objects/attention_types/contribution', false, 'titania_attention_contribution');
+				$object = new titania_attention_contribution();
+			break;
+
+			default:
+				$object = new titania_attention();
+		}
+
+		$object->__set_array($data);
+		return $object;
+	}
+
+	/**
 	* Load an attention item by attention_id or the type/id
 	*
 	* @param mixed $attention_id
@@ -36,7 +72,9 @@ class attention_overlord
 	*/
 	public static function load_attention($attention_id, $object_type = false, $object_id = false)
 	{
-		$sql = 'SELECT * FROM ' . TITANIA_ATTENTION_TABLE . '
+		$sql = 'SELECT a.* FROM ' . TITANIA_ATTENTION_TABLE . ' a
+			LEFT JOIN ' . TITANIA_CONTRIBS_TABLE . ' c
+				ON (a.attention_object_type = ' . TITANIA_CONTRIB . ' AND a.attention_object_id = c.contrib_id)
 			WHERE ';
 
 		if ($attention_id)
@@ -52,6 +90,9 @@ class attention_overlord
 		{
 			$sql .= 'attention_object_type = ' . (int) $object_type . ' AND attention_object_id = ' . (int) $object_id;
 		}
+
+		// Permissions
+		$sql .= ' AND ' . self::get_permission_sql();
 
 		$result = phpbb::$db->sql_query($sql);
 		$row = phpbb::$db->sql_fetchrow($result);
@@ -72,6 +113,7 @@ class attention_overlord
 	*
 	* @param array $options
 	* 	attention_type
+	*	exclude_attention_types
 	* 	attention_object_id
 	* 	only_closed bool only display closed items
 	* 	display_closed bool display closed and open items
@@ -89,10 +131,17 @@ class attention_overlord
 
 
 		$sql_ary = array(
-			'SELECT'	=> '*',
+			'SELECT'	=> 'a.*',
 
 			'FROM'		=> array(
 				TITANIA_ATTENTION_TABLE	=> 'a',
+			),
+
+			'LEFT_JOIN'	=> array(
+				array(
+					'FROM'	=> array(TITANIA_CONTRIBS_TABLE => 'c'),
+					'ON'	=> 'a.attention_object_type = ' . TITANIA_CONTRIB . ' AND a.attention_object_id = c.contrib_id',
+				),
 			),
 
 			'WHERE'		=> array(),
@@ -104,6 +153,12 @@ class attention_overlord
 		if (isset($options['attention_type']) && $options['attention_type'])
 		{
 			$sql_ary['WHERE'][] = 'a.attention_type = ' . (int) $options['attention_type'];
+		}
+
+		// Exclude certain types
+		if (!empty($options['exclude_attention_types']))
+		{
+			$sql_ary['WHERE'][] = phpbb::$db->sql_in_set('a.attention_type', $options['exclude_attention_types'], true);
 		}
 
 		// Limit to certain item if requested
@@ -121,6 +176,8 @@ class attention_overlord
 		{
 			$sql_ary['WHERE'][] = 'a.attention_close_time = 0';
 		}
+
+		$sql_ary['WHERE'][] = self::get_permission_sql();
 
 		$sql_ary['WHERE'] = implode(' AND ', $sql_ary['WHERE']);
 
@@ -161,18 +218,15 @@ class attention_overlord
 		users_overlord::load_users($user_ids);
 
 		// Output time
-		$attention = new titania_attention;
 		foreach ($attention_ids as $attention_id)
 		{
-			$row = self::$attention_items[$attention_id];
-
-			$attention->__set_array($row);
+			$attention = self::get_attention_object($attention_id);
 
 			$output = array_merge(
 				$attention->assign_details(true),
-				users_overlord::assign_details($row['attention_poster_id']),
-				users_overlord::assign_details($row['attention_requester'], 'REPORTER_'),
-				users_overlord::assign_details($row['attention_close_user'], 'CLOSER_')
+				users_overlord::assign_details($attention->attention_poster_id),
+				users_overlord::assign_details($attention->attention_requester, 'REPORTER_'),
+				users_overlord::assign_details($attention->attention_close_user, 'CLOSER_')
 			);
 
 			// Do we have to?
@@ -180,7 +234,7 @@ class attention_overlord
 			{
 				$output = array_merge(
 					$output,
-					users_overlord::assign_details($row['attention_close_user'], 'CLOSE_')
+					users_overlord::assign_details($attention->attention_close_user, 'CLOSE_')
 				);
 			}
 
@@ -209,5 +263,37 @@ class attention_overlord
 		$sort->default_limit = phpbb::$config['topics_per_page'];
 
 		return $sort;
+	}
+
+	/**
+	* Get permission check for WHERE clause
+	*/
+	public static function get_permission_sql()
+	{
+		$sql_where = '';
+		$types_managed = titania_types::find_authed('moderate');
+
+		if (phpbb::$auth->acl_get('u_titania_mod_post_mod'))
+		{
+			$sql_where .= '(a.attention_object_type = ' . TITANIA_POST . ')';
+			$negated = false;
+		}
+		else
+		{
+			$sql_where .= '(a.attention_object_type <> ' . TITANIA_POST . ')';
+			$negated = true;
+		}
+
+		if (!empty($types_managed))
+		{
+			$sql_where .= ($negated) ? ' AND ' : ' OR '; 
+			$sql_where .= '(a.attention_object_type = ' . TITANIA_CONTRIB . ' AND ' . phpbb::$db->sql_in_set('c.contrib_type', $types_managed) . ')';
+		}
+		else
+		{
+			$sql_where .= 'AND (a.attention_object_type <> ' . TITANIA_CONTRIB . ')';
+		}
+
+		return '(' . $sql_where . ')';
 	}
 }
