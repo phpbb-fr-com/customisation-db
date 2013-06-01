@@ -337,17 +337,25 @@ class titania_contribution extends titania_message_object
 
 		if (sizeof($this->revisions))
 		{
+			$has_translations = false;
 			// Get translations
 			$sql = 'SELECT * FROM ' . TITANIA_ATTACHMENTS_TABLE . '
 				WHERE object_type = ' . TITANIA_TRANSLATION . '
 					AND is_orphan = 0
-					AND ' . phpbb::$db->sql_in_set('object_id', array_map('intval', array_keys($this->revisions)));
+					AND ' . phpbb::$db->sql_in_set('object_id', array_map('intval', array_keys($this->revisions))) . '
+				ORDER BY ' . phpbb::$db->sql_lower_text('real_filename') . ' ASC'; 
 			$result = phpbb::$db->sql_query($sql);
 			while ($row = phpbb::$db->sql_fetchrow($result))
 			{
 				$this->revisions[$row['object_id']]['translations'][] = $row;
+				$has_translations = true;
 			}
 			phpbb::$db->sql_freeresult($result);
+
+			if ($has_translations)
+			{
+				phpbb::$template->assign_var('S_TRANSLATIONS', true);
+			}
 
 			// Get phpBB versions supported
 			$sql = 'SELECT revision_id, phpbb_version_branch, phpbb_version_revision FROM ' . TITANIA_REVISIONS_PHPBB_TABLE . '
@@ -646,12 +654,12 @@ class titania_contribution extends titania_message_object
 			{
 				$screenshots = $this->screenshots->get_attachments();
 				$indices = array_keys($screenshots);
-				$custom_sort = true;
+				$custom_sort = 'titania_attach_order_compare';
 
 				if ((sizeof($indices) > 1))
 				{
 					// If attachment_order hasn't been filled, then we fall back to the default behavior of sorting by attachment_id. 
-					$custom_sort = ($screenshots[$indices[1]]['attachment_order'] >= 1) ? true : false;
+					$custom_sort = ($screenshots[$indices[1]]['attachment_order'] >= 1) ? $custom_sort : false;
 				}
 
 				$this->screenshots->parse_attachments($message = false, false, false, 'screenshots', $custom_sort);
@@ -838,12 +846,12 @@ class titania_contribution extends titania_message_object
 		phpbb_posting('reply', $options_reply);
 	}
 
-	public function report($reason = '', $notify_reporter = false)
+	public function report($reason = '', $notify_reporter = false, $attention_type = TITANIA_ATTENTION_REPORTED)
 	{
 		// Setup the attention object and submit it
 		$attention = new titania_attention;
 		$attention->__set_array(array(
-			'attention_type'		=> TITANIA_ATTENTION_REPORTED,
+			'attention_type'		=> $attention_type,
 			'attention_object_type'	=> TITANIA_CONTRIB,
 			'attention_object_id'	=> $this->contrib_id,
 			'attention_poster_id'	=> $this->contrib_user_id,
@@ -894,6 +902,7 @@ class titania_contribution extends titania_message_object
 		switch ($old_status)
 		{
 			case TITANIA_CONTRIB_APPROVED :
+				$this->update_composer_package('remove');
 			case TITANIA_CONTRIB_DOWNLOAD_DISABLED :
 				// Decrement the count for the authors
 				$this->change_author_contrib_count($author_list, '-', true);
@@ -910,6 +919,7 @@ class titania_contribution extends titania_message_object
 		switch ($this->contrib_status)
 		{
 			case TITANIA_CONTRIB_APPROVED :
+				$this->update_composer_package();
 			case TITANIA_CONTRIB_DOWNLOAD_DISABLED :
 				// Increment the count for the authors
 				$this->change_author_contrib_count($author_list);
@@ -1559,6 +1569,8 @@ class titania_contribution extends titania_message_object
 			WHERE contrib_id = ' . $this->contrib_id;
 		phpbb::$db->sql_query($sql);
 
+		$this->update_composer_package('remove');
+
 		// Self delete
 		parent::delete();
 	}
@@ -1622,5 +1634,40 @@ class titania_contribution extends titania_message_object
 		);
 
 		titania_search::index(TITANIA_CONTRIB, $this->contrib_id, $data);
+	}
+
+	/**
+	 * Add/remove the contribution from the Composer packages file.
+	 */
+	public function update_composer_package($mode = 'add')
+	{
+		titania::_include('tools/composer_package_manager', false, 'titania_composer_package_helper');
+		$package_helper = new titania_composer_package_helper();
+
+		if (!titania::$config->composer_vendor_name || !titania_types::$types[$this->contrib_type]->create_composer_packages || !$package_helper->packages_dir_writable())
+		{
+			return;
+		}
+		$package_manager = new titania_composer_package_manager($this->contrib_id, $this->contrib_name_clean, $this->contrib_type, $package_helper);
+
+		if ($mode == 'add')
+		{
+			$sql = 'SELECT revision_version, attachment_id
+				FROM ' . TITANIA_REVISIONS_TABLE . '
+				WHERE revision_status = ' . TITANIA_REVISION_APPROVED . '
+					AND contrib_id = ' . (int) $this->contrib_id;
+			$result = phpbb::$db->sql_query($sql);
+
+			while ($row = phpbb::$db->sql_fetchrow($result))
+			{
+				$package_manager->add_release($row['revision_version'], $row['attachment_id'], true);
+			}
+			phpbb::$db->sql_freeresult($result);
+		}
+		else if ($mode == 'remove')
+		{
+			$package_manager->remove_package();
+		}
+		$package_manager->submit();
 	}
 }

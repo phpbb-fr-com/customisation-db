@@ -41,6 +41,7 @@ define('TITANIA_REVISION_PULLED_SECURITY', 4); // Has been pulled for a security
 define('TITANIA_REVISION_PULLED_OTHER', 5); // Has been pulled for an other non-security reason
 define('TITANIA_REVISION_REPACKED', 6); // Has been repacked
 define('TITANIA_REVISION_RESUBMITTED', 7); // Has been resubmitted
+define('TITANIA_REVISION_ON_HOLD', 8); // Aimed for next phpBB release
 
 // Queue status
 define('TITANIA_QUEUE_CLOSED', -3); // Special case to hide closed revisions from the queue
@@ -84,6 +85,8 @@ define('TITANIA_ACCESS_PUBLIC', 2);
 // Attention stuff
 define('TITANIA_ATTENTION_REPORTED', 1);
 define('TITANIA_ATTENTION_UNAPPROVED', 2);
+define('TITANIA_ATTENTION_CATS_CHANGED', 3);
+define('TITANIA_ATTENTION_DESC_CHANGED', 4);
 
 // Header status codes
 define('HEADER_OK',						200);

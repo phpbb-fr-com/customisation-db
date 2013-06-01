@@ -119,6 +119,9 @@ $error = array();
 $require_upload = titania_types::$types[titania::$contrib->contrib_type]->require_upload;
 $is_bbcode = (titania::$contrib->contrib_type == TITANIA_TYPE_BBCODE);
 
+// Hard-code the version for now... :-/
+$prerelease_submission_allowed = prerelease_submission_allowed('30', titania::$contrib->contrib_type);
+
 if ($step == 1)
 {
 	// Set up attachment object to get some default values
@@ -133,6 +136,7 @@ if ($step == 1)
 	$revision_bbc_demo		= utf8_normalize_nfc(request_var('revision_bbc_demo', '', true));
 	$queue_allow_repack 	= request_var('queue_allow_repack', 0);
 	$revision_license 		= utf8_normalize_nfc(request_var('revision_license', '', true));
+	$prerelease_submission	= request_var('prerelease_submission', false);
 
 	// Check for errors
 	$error = array_merge($error, $revision_attachment->error);
@@ -204,6 +208,7 @@ if ($step == 1)
 			'attachment_id'			=> $revision_attachment->attachment_id,
 			'revision_name'			=> utf8_normalize_nfc(request_var('revision_name', '', true)),
 			'revision_version'		=> $revision_version,
+			'revision_status'		=> ($prerelease_submission_allowed && $prerelease_submission) ? TITANIA_REVISION_ON_HOLD : TITANIA_REVISION_NEW,
 			'queue_allow_repack'	=> $queue_allow_repack,
 			'revision_license'		=> ($revision_license != phpbb::$user->lang['CUSTOM_LICENSE'] || !titania_types::$types[titania::$contrib->contrib_type]->license_allow_custom) ? $revision_license : utf8_normalize_nfc(request_var('revision_custom_license', '', true)),
 			'revision_bbc_html_replace'		=> $revision_html_replace,
@@ -239,6 +244,7 @@ if ($step == 1)
 			{
 				titania::$contrib->change_status(TITANIA_CONTRIB_APPROVED);
 			}
+			$revision->update_composer_package();
 		}
 
 		$revision->submit();
@@ -299,7 +305,7 @@ if ($step == 1)
 
 				if ($repack)
 				{
-					if (titania_types::$types[titania::$contrib->contrib_type]->acl_get('moderate') && titania::$config->use_queue && titania_types::$types[titania::$contrib->contrib_type]->use_queue)
+					if (!titania::$contrib->is_active_coauthor && !titania::$contrib->is_author && titania_types::$types[titania::$contrib->contrib_type]->acl_get('moderate') && titania::$config->use_queue && titania_types::$types[titania::$contrib->contrib_type]->use_queue)
 					{
 						redirect(titania_url::build_url('manage/queue', array('q' => $revision->revision_queue_id)));
 					}
@@ -330,7 +336,7 @@ if ($step == 1)
 		}
 
 		$zip_file = titania::$config->upload_path . '/' . utf8_basename($revision_attachment->attachment_directory) . '/' . utf8_basename($revision_attachment->physical_filename);
-		$new_dir_name = titania::$contrib->contrib_name_clean . '_' . preg_replace('#[^0-9a-z]#', '_', strtolower($revision_version));
+		$new_dir_name = titania_url::url_slug(titania::$contrib->contrib_name) . '_' . preg_replace('#[^0-9a-z]#', '_', strtolower($revision_version));
 		$download_package = titania_url::build_url('download', array('id' => $revision_attachment->attachment_id));
 
 		// Start up the machine
@@ -382,20 +388,6 @@ if ($step == 1)
 
 			// Replace the uploaded zip package with the new one
 			$contrib_tools->replace_zip();
-
-			if ($old_hash != $contrib_tools->md5_hash)
-			{
-				$sql_ary = array(
-					'filesize'	=> $contrib_tools->filesize,
-					'hash'		=> $contrib_tools->md5_hash,
-				);
-
-				// Update the db with the new filesize and hash
-				$sql = 'UPDATE ' . TITANIA_ATTACHMENTS_TABLE . '
-					SET ' . phpbb::$db->sql_build_array('UPDATE', $sql_ary) . '
-					WHERE attachment_id = ' . (int) $revision_attachment->attachment_id;
-				phpbb::$db->sql_query($sql);
-			}
 
 			if (titania_types::$types[titania::$contrib->contrib_type]->mpv_test && titania::$config->use_queue && titania_types::$types[titania::$contrib->contrib_type]->use_queue)
 			{
@@ -480,22 +472,37 @@ if ($step > sizeof(titania_types::$types[titania::$contrib->contrib_type]->uploa
 	$revision->revision_submitted = true;
 	$revision->submit();
 
+	$queue = $revision->get_queue();
+
 	// Update the queue (make visible)
 	$revision->update_queue();
 
-	// Update the attachment MD5, it may have changed
+	$sql_ary = array(
+		'filesize'	=> $contrib_tools->filesize,
+		'hash'		=> $contrib_tools->md5_hash,
+	);
+
+	// Update the attachment MD5 and filesize, it may have changed
 	$sql = 'UPDATE ' . TITANIA_ATTACHMENTS_TABLE . '
-		SET hash = \'' . phpbb::$db->sql_escape($contrib_tools->md5_hash) . '\'
-		WHERE attachment_id = ' . $revision_attachment->attachment_id;
+		SET ' . phpbb::$db->sql_build_array('UPDATE', $sql_ary) . '
+		WHERE attachment_id = ' . (int) $revision_attachment->attachment_id;
 	phpbb::$db->sql_query($sql);
 
-	if ($repack && titania::$config->use_queue && titania_types::$types[titania::$contrib->contrib_type]->use_queue)
+	if ($repack)
 	{
-		redirect(titania_url::build_url('manage/queue', array('q' => $revision->revision_queue_id)));
+		if (!titania::$contrib->is_active_coauthor && !titania::$contrib->is_author && titania_types::$types[titania::$contrib->contrib_type]->acl_get('moderate') && titania::$config->use_queue && titania_types::$types[titania::$contrib->contrib_type]->use_queue)
+		{
+			redirect(titania_url::build_url('manage/queue', array('q' => $revision->revision_queue_id)));
+		}
+
+		// Reset this now that the author has repacked it.
+		$queue->allow_author_repack = false;
+		$queue->submit();
+
+		redirect(titania::$contrib->get_url());
 	}
 
 	// Subscriptions
-	$queue = $revision->get_queue();
 	if ($queue)
 	{
 		$email_vars = array(
@@ -595,11 +602,13 @@ if ($step == 0 || sizeof($error))
 
 		'NEXT_STEP'					=> 1,
 
+		'S_CAN_SUBMIT_PRERELEASE_VERSION'	=> $prerelease_submission_allowed,
 		'S_CAN_SUBSCRIBE'					=> ($author_subscribed || !$allow_subscription) ? false : true,
 		'S_CUSTOM_LICENSE'					=> (utf8_normalize_nfc(request_var('revision_license', '', true)) == phpbb::$user->lang['CUSTOM_LICENSE']) ? true : false,
 		'S_ALLOW_CUSTOM_LICENSE'			=> (titania_types::$types[titania::$contrib->contrib_type]->license_allow_custom) ? true : false,
 		'S_REQUIRE_UPLOAD'					=> $require_upload,
 		'S_TYPE_BBCODE'						=> $is_bbcode,
+		'SUBMIT_PRERELEASE_VERSION'			=> request_var('prerelease_submission', false),
 		'SUBSCRIBE_AUTHOR'					=> request_var('subscribe_author', false),
 	));
 
