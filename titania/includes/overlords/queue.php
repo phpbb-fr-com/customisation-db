@@ -190,6 +190,7 @@ class queue_overlord
 				'TOPIC_SUBJECT'				=> $row['contrib_name'] . ' - ' . $row['revision_version'],
 				'S_TOPIC_PROGRESS'			=> ($row['queue_progress']) ? true : false,
 				'U_VIEW_TOPIC'				=> titania_url::append_url($topic->get_url(), array('tag' => $queue_status)),
+				'S_TESTED'					=> ($row['queue_tested']) ? true : false,
 			)));
 		}
 
@@ -271,6 +272,22 @@ class queue_overlord
 		// Bit of a hack for the posting
 		$_REQUEST['t'] = $topic->topic_id;
 
+		// Misc actions
+		$subactions = array();
+		if (/*!$row['mpv_results'] && */titania_types::$types[$contrib->contrib_type]->mpv_test)
+		{
+			$subactions['RETEST_MPV'] = array(
+				'url'		=> titania_url::build_url('', array('action' => 'mpv', 'revision' => $row['revision_id'])),
+			);
+		}
+
+		if (/*!$row['automod_results'] && */titania_types::$types[$contrib->contrib_type]->automod_test)
+		{
+			$subactions['RETEST_AUTOMOD'] = array(
+				'url'		=> titania_url::build_url('', array('action' => 'automod', 'revision' => $row['revision_id'])),
+			);
+		}
+
 		// Some quick-actions
 		$quick_actions = array();
 		if ($row['queue_status'] > 0)
@@ -312,22 +329,6 @@ class queue_overlord
 				'url'		=> titania_url::append_url(titania_url::$current_page_url, array('action' => 'notes')),
 			);*/
 
-			// Misc actions
-			$subactions = array();
-			if (/*!$row['mpv_results'] && */titania_types::$types[$contrib->contrib_type]->mpv_test)
-			{
-				$subactions['RETEST_MPV'] = array(
-					'url'		=> titania_url::build_url('', array('action' => 'mpv', 'revision' => $row['revision_id'])),
-				);
-			}
-
-			if (/*!$row['automod_results'] && */titania_types::$types[$contrib->contrib_type]->automod_test)
-			{
-				$subactions['RETEST_AUTOMOD'] = array(
-					'url'		=> titania_url::build_url('', array('action' => 'automod', 'revision' => $row['revision_id'])),
-				);
-			}
-
 			// misc subactions
 			$subactions['REBUILD_FIRST_POST'] = array(
 				'url'		=> titania_url::append_url(titania_url::$current_page_url, array('action' => 'rebuild')),
@@ -337,6 +338,19 @@ class queue_overlord
 				$subactions['ALLOW_AUTHOR_REPACK'] = array(
 					'url'		=> titania_url::append_url(titania_url::$current_page_url, array('action' => 'allow_author_repack')),
 				);
+			}
+
+			if (!$row['queue_tested'])
+			{
+				$subactions['MARK_TESTED'] = array(
+					'url'		=> titania_url::append_url(titania_url::$current_page_url, array('action' => 'tested')),
+				);			
+			}
+			else
+			{
+				$subactions['MARK_UNTESTED'] = array(
+					'url'		=> titania_url::append_url(titania_url::$current_page_url, array('action' => 'not_tested')),
+				);				
 			}
 
 			$quick_actions['CAT_MISC'] = array(
@@ -362,6 +376,14 @@ class queue_overlord
 					'class'		=> 'deny',
 				);
 			}
+		}
+
+		if (empty($quick_actions['CAT_MISC']))
+		{
+			$quick_actions['CAT_MISC'] = array(
+				'subactions'	=> $subactions,
+				'class'			=> 'misc',
+			);		
 		}
 
 		foreach ($quick_actions as $lang_key => $data)

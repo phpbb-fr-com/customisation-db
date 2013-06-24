@@ -265,13 +265,7 @@ class titania_posting
 			$post_object = $this->load_post($post_id);
 
 			// Check permissions
-			if (!$post_object->acl_get('edit'))
-			{
-				echo phpbb::$user->lang['NO_AUTH'];
-
-				garbage_collection();
-				exit_handler();
-			}
+			$this->quick_edit_auth_check($post_object);
 
 			$post_message = $post_object->post_text;
 			titania_decode_message($post_message, $post_object->post_text_uid);
@@ -296,13 +290,11 @@ class titania_posting
 			header('Expires: 0');
 			header('Pragma: no-cache');
 
-			phpbb::$template->display('quick_edit');
-
-			garbage_collection();
-			exit_handler();
+			$result = array('result' => 'success', 'content' => phpbb::$template->assign_display('quick_edit'));
+			$this->json_output($result);
 		}
 
-		if ($full_editor || !check_form_key('postform'))
+		if ($full_editor)
 		{
 			$this->edit($post_id);
 
@@ -313,9 +305,12 @@ class titania_posting
 		$post_object = $this->load_post($post_id);
 
 		// Check permissions
-		if (!$post_object->acl_get('edit'))
+		$this->quick_edit_auth_check($post_object);
+
+		if (!check_form_key('postform'))
 		{
-			titania::needs_auth();
+			$result = array('result' => 'invalid_token', 'content' => phpbb::$user->lang['FORM_INVALID']);
+			$this->json_output($result);
 		}
 
 		// Grab some data
@@ -348,8 +343,43 @@ class titania_posting
 		$parsed_attachments = $attachments->parse_attachments($message);
 
 		// echo the message (returned to the JS to display in the place of the old message)
-		echo '<span>' . censor_text($post_object->post_subject) . '</span>';
-		echo $message;
+		$content =  '<span>' . censor_text($post_object->post_subject) . '</span>' . $message;
+		$result = array('result' => 'success', 'content' => $content);
+		$this->json_output($result);
+	}
+
+	/**
+	*  Check permissions for quick edit and exit with appropriate error if necessary.
+	*/
+	private function quick_edit_auth_check($post_object)
+	{
+		$result = array();
+
+		// User must be logged in...
+		if (phpbb::$user->data['user_id'] == ANONYMOUS)
+		{
+			$result = array('result' => 'error', 'content' => phpbb::$user->lang['LOGIN_EXPLAIN_EDIT']);
+		}
+		// Check permissions
+		else if (!$post_object->acl_get('edit'))
+		{
+			$result = array('result' => 'error', 'content' => phpbb::$user->lang['NO_AUTH']);
+		}
+
+		if (!empty($result))
+		{
+			$this->json_output($result);
+		}
+	}
+
+	/**
+	* Output array in json format and exit
+	*
+	* @param array $data Data to output
+	*/
+	private function json_output($data)
+	{
+		echo json_encode($data);
 
 		garbage_collection();
 		exit_handler();
@@ -960,6 +990,15 @@ class titania_posting
 		// Submit check...handles running $post->post_data() if required
 		$submit = $message_object->submit_check();
 
+		$post_attachments = $message_object->attachments->get_attachments();
+
+		// Ensure that post_attachment remains valid when the user doesn't submit the post after deleting all attachments
+		if ($mode == 'edit' && $post_object->post_attachment && empty($post_attachments))
+		{
+			$sql = 'UPDATE ' . TITANIA_POSTS_TABLE . ' SET post_attachment = 0 WHERE post_id = ' . (int) $post_object->post_id;
+			phpbb::$db->sql_query($sql);
+		}
+
 		if ($submit)
 		{
 			$error = $post_object->validate();
@@ -995,6 +1034,7 @@ class titania_posting
 					$post_object->post_approved = false;
 				}
 
+				$post_object->post_attachment = (!empty($post_attachments)) ? true : false;
 				$post_object->parent_contrib_type = $this->parent_type;
 				$post_object->submit();
 

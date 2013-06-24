@@ -756,5 +756,13 @@ $versions = array(
 	'0.5.10' => array(
 		'custom'	=> 'titania_custom',
 	),
+	'0.5.11' => array(
+		'table_column_add' => array(
+			array(TITANIA_QUEUE_TABLE, 'queue_tested', array('BOOL', 0)),
+		),
+	),
+	'0.5.12' => array(
+		'custom'	=> 'titania_custom',
+	),
 	// IF YOU ADD A NEW VERSION DO NOT FORGET TO INCREMENT THE VERSION NUMBER IN common.php!
 );
