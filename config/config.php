@@ -52,8 +52,9 @@ class config extends \phpbb\titania\entity\base
 		}
 
 		$this->object_config = array_merge($this->object_config, array(
-			'phpbb_script_path'			=> array('default' => 'community/'),
-			'titania_script_path'		=> array('default' => 'customisation/'),
+			'phpbb_root_path'			=> array('default' => '../../forums/'),
+			'phpbb_script_path'			=> array('default' => 'forums/'),
+			'titania_script_path'		=> array('default' => 'customise/'),
 			'upload_path'				=> array('default' => $this->ext_root_path . 'files/'),
 			'contrib_temp_path'			=> array('default' => $this->ext_root_path . 'files/contrib_temp/'),
 			'language_path'				=> array('default' => $this->ext_root_path . 'language/'),
@@ -225,7 +226,7 @@ class config extends \phpbb\titania\entity\base
 			)),
 
 			// Remove unsubmitted revisions and attachments
-			'cleanup_titania'				=> array('default' => false),
+			'cleanup_titania'				=> array('default' => true),
 		));
 	}
 
