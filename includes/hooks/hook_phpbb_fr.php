@@ -21,9 +21,7 @@ if (!defined('IN_PHPBB'))
 
 use phpbb\titania\message\message;
 
-//define('TEST_INSTALLATION', true);
-
-titania::$hook->register_ary('phpbb_com_', array(
+titania::$hook->register_ary('phpbb_fr_', array(
 	array('titania_queue', 'update_first_queue_post'),
 	array('titania_topic', '__construct'),
 	array('titania_post', '__construct'),
@@ -37,38 +35,76 @@ titania::$hook->register_ary('phpbb_com_', array(
 	array('titania_contribution', 'assign_details'),
 ));
 
-// Display a warning for styles not meeting the licensing guidelines
-function phpbb_com_titania_contribution_assign_details($hook, &$vars, $contrib)
+function phpbb_fr_forum_id($type, $mode, $branch)
 {
-	if ($contrib->contrib_type != TITANIA_TYPE_STYLE || empty($contrib->download))
+	switch ($type)
 	{
-		return;
+		case TITANIA_TYPE_EXTENSION :
+			switch ($mode)
+			{
+				case TITANIA_QUEUE_DISCUSSION:
+					$config_name = 'forum_extension_queue_discussion';
+				break;
+
+				case TITANIA_QUEUE:
+					$config_name = 'forum_extension_queue';
+				break;
+
+				case 'trash':
+					$config_name = 'forum_extension_queue_trash';
+				break;
+			}
+		break;
+
+		case TITANIA_TYPE_MOD:
+			switch ($mode)
+			{
+				case TITANIA_QUEUE_DISCUSSION:
+					$config_name = 'forum_mod_queue_discussion';
+				break;
+
+				case TITANIA_QUEUE:
+					$config_name = 'forum_mod_queue';
+				break;
+
+				case 'trash':
+					$config_name = 'forum_mod_queue_trash';
+				break;
+			}
+		break;
+
+		case TITANIA_TYPE_STYLE:
+			switch ($mode)
+			{
+				case TITANIA_QUEUE_DISCUSSION:
+					$config_name = 'forum_style_queue_discussion';
+				break;
+
+				case TITANIA_QUEUE:
+					$config_name = 'forum_style_queue';
+				break;
+
+				case 'trash':
+					$config_name = 'forum_style_queue_trash';
+				break;
+			}
+		break;
 	}
 
-	foreach ($contrib->download as $download)
+	if (!isset($config_name) || !isset(titania::$config->$config_name))
 	{
-		if ($download['revision_license'] == '')
-		{
-			if (isset($vars['WARNING']))
-			{
-				$vars['WARNING'] .= '<br />';
-			}
-			else
-			{
-				$vars['WARNING'] = '';
-			}
-
-			$vars['WARNING'] .= 'WARNING: This style currently does not meet our licensing guidelines.';
-
-			break;
-		}
+		return 0;
 	}
+	
+	$forums = titania::$config->$config_name;
+	$branch = (string) $branch;
+	return isset($forums[$branch]) ? (int) $forums[$branch] : 0;
 }
 
 /**
 * Copy new posts for queue discussion, queue to the forum
 */
-function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $queue_object)
+function phpbb_fr_titania_queue_update_first_queue_post($hook, &$post_object, $queue_object)
 {
 	if ($queue_object->queue_status == TITANIA_QUEUE_HIDE || !$queue_object->queue_topic_id)
 	{
@@ -76,6 +112,10 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 	}
 
 	$path_helper = phpbb::$container->get('path_helper');
+	
+	$revision = $queue_object->get_revision();
+	$revision->load_phpbb_versions();
+	$branch = (int) $revision->phpbb_versions[0]['phpbb_version_branch'];
 
 	// First we copy over the queue discussion topic if required
 	$sql = 'SELECT topic_id, phpbb_topic_id, topic_category FROM ' . TITANIA_TOPICS_TABLE . '
@@ -88,7 +128,12 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 	// Do we need to create the queue discussion topic or not?
 	if ($topic_row['topic_id'] && !$topic_row['phpbb_topic_id'])
 	{
-		$forum_id = phpbb_com_forum_id($post_object->topic->topic_category, TITANIA_QUEUE_DISCUSSION);
+		$forum_id = phpbb_fr_forum_id($post_object->topic->topic_category, TITANIA_QUEUE_DISCUSSION, $branch);
+		
+		if (!$forum_id)
+		{
+			return;
+		}
 
 		$temp_post = new titania_post;
 
@@ -102,7 +147,7 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 
 			$post_text = $row['post_text'];
 
-			phpbb_com_handle_attachments($temp_post, $post_text);
+			phpbb_fr_handle_attachments($temp_post, $post_text);
 			message::decode($post_text, $row['post_text_uid']);
 
 			$post_text .= "\n\n" . $path_helper->strip_url_params($temp_post->get_url(), 'sid');
@@ -168,7 +213,7 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 		return;
 	}
 
-	$forum_id = phpbb_com_forum_id($post_object->topic->topic_category, $post_object->topic->topic_type);
+	$forum_id = phpbb_fr_forum_id($post_object->topic->topic_category, $post_object->topic->topic_type, $branch);
 
 	if (!$forum_id)
 	{
@@ -205,7 +250,6 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 
 		default :
 			return;
-		break;
 	}
 
 	$description = $contrib->contrib_desc;
@@ -225,7 +269,7 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 
 	$post_text .= "\n\n" . $post_object->post_text;
 
-	phpbb_com_handle_attachments($post_object, $post_text);
+	phpbb_fr_handle_attachments($post_object, $post_text);
 	message::decode($post_text, $post_object->post_text_uid);
 
 	$post_text .= "\n\n" . $path_helper->strip_url_params($post_object->get_url(), 'sid');
@@ -247,17 +291,23 @@ function phpbb_com_titania_queue_update_first_queue_post($hook, &$post_object, $
 	phpbb::$db->sql_query($sql);
 }
 
+function phpbb_fr_titania_topic___construct($hook, &$topic_object)
+{
+	$topic_object->object_config = array_merge($topic_object->object_config, array(
+		'phpbb_topic_id'	=> array('default' => 0),
+	));
+}
 
-function phpbb_com_titania_post_post($hook, &$post_object)
+function phpbb_fr_titania_post___construct($hook, &$post_object)
+{
+	$post_object->object_config = array_merge($post_object->object_config, array(
+		'phpbb_post_id'	=> array('default' => 0),
+	));
+}
+
+function phpbb_fr_titania_post_post($hook, &$post_object)
 {
 	if (defined('IN_TITANIA_CONVERT') || !$post_object->topic->phpbb_topic_id)
-	{
-		return;
-	}
-
-	$forum_id = phpbb_com_forum_id($post_object->topic->topic_category, $post_object->post_type);
-
-	if (!$forum_id)
 	{
 		return;
 	}
@@ -267,7 +317,7 @@ function phpbb_com_titania_post_post($hook, &$post_object)
 	$path_helper = phpbb::$container->get('path_helper');
 	$post_text = $post_object->post_text;
 
-	phpbb_com_handle_attachments($post_object, $post_text);
+	phpbb_fr_handle_attachments($post_object, $post_text);
 	message::decode($post_text, $post_object->post_text_uid);
 
 	$post_text .= "\n\n" . $path_helper->strip_url_params($post_object->get_url(), 'sid');
@@ -287,27 +337,19 @@ function phpbb_com_titania_post_post($hook, &$post_object)
 	phpbb::$db->sql_query($sql);
 }
 
-function phpbb_com_titania_post_edit($hook, &$post_object)
+function phpbb_fr_titania_post_edit($hook, &$post_object)
 {
 	if (defined('IN_TITANIA_CONVERT') || !$post_object->phpbb_post_id)
 	{
 		return;
 	}
 
-	$forum_id = phpbb_com_forum_id($post_object->topic->topic_category, $post_object->post_type);
-
-	if (!$forum_id)
-	{
-		return;
-	}
-
-
 	titania::_include('functions_posting', 'phpbb_posting');
 
 	$path_helper = phpbb::$container->get('path_helper');
 	$post_text = $post_object->post_text;
 
-	phpbb_com_handle_attachments($post_object, $post_text);
+	phpbb_fr_handle_attachments($post_object, $post_text);
 	message::decode($post_text, $post_object->post_text_uid);
 
 	$post_text .= "\n\n" . $path_helper->strip_url_params($post_object->get_url(), 'sid');
@@ -321,15 +363,15 @@ function phpbb_com_titania_post_edit($hook, &$post_object)
 	phpbb_posting('edit', $options);
 }
 
-function phpbb_com_titania_post_hard_delete($hook, &$post_object)
+function phpbb_fr_titania_post_hard_delete($hook, &$post_object)
 {
 	if (defined('IN_TITANIA_CONVERT') || !$post_object->phpbb_post_id)
 	{
 		return;
 	}
-	
+
 	phpbb::_include('functions_posting', 'delete_post');
-	
+
 	$sql = 'SELECT t.*, p.*
 	FROM ' . TOPICS_TABLE . ' t, ' . POSTS_TABLE . ' p
 		WHERE p.post_id = ' . $post_object->phpbb_post_id . '
@@ -341,45 +383,32 @@ function phpbb_com_titania_post_hard_delete($hook, &$post_object)
 	delete_post($post_data['forum_id'], $post_data['topic_id'], $post_data['post_id'], $post_data);
 }
 
-function phpbb_com_titania_topic___construct($hook, &$topic_object)
-{
-	$topic_object->object_config = array_merge($topic_object->object_config, array(
-		'phpbb_topic_id'	=> array('default' => 0),
-	));
-}
-
-function phpbb_com_titania_post___construct($hook, &$post_object)
-{
-	$post_object->object_config = array_merge($post_object->object_config, array(
-		'phpbb_post_id'	=> array('default' => 0),
-	));
-}
 
 /**
 * Move queue topics to the trash can
 */
 
-function phpbb_com_titania_queue_approve($hook, &$queue_object)
+function phpbb_fr_titania_queue_approve($hook, &$queue_object)
 {
-	phpbb_com_move_queue_topic($queue_object);
+	phpbb_fr_move_queue_topic($queue_object);
 }
 
-function phpbb_com_titania_queue_deny($hook, &$queue_object)
+function phpbb_fr_titania_queue_deny($hook, &$queue_object)
 {
-	phpbb_com_move_queue_topic($queue_object);
+	phpbb_fr_move_queue_topic($queue_object);
 }
 
-function phpbb_com_titania_queue_close($hook, &$queue_object)
+function phpbb_fr_titania_queue_close($hook, &$queue_object)
 {
-	phpbb_com_move_queue_topic($queue_object);
+	phpbb_fr_move_queue_topic($queue_object);
 }
 
-function phpbb_com_titania_queue_delete($hook, &$queue_object)
+function phpbb_fr_titania_queue_delete($hook, &$queue_object)
 {
-	phpbb_com_move_queue_topic($queue_object);
+	phpbb_fr_move_queue_topic($queue_object);
 }
 
-function phpbb_com_move_queue_topic($queue_object)
+function phpbb_fr_move_queue_topic($queue_object)
 {
 	$sql = 'SELECT phpbb_topic_id, topic_category FROM ' . TITANIA_TOPICS_TABLE . '
 		WHERE topic_id = ' . (int) $queue_object->queue_topic_id;
@@ -393,75 +422,43 @@ function phpbb_com_move_queue_topic($queue_object)
 	}
 
 	phpbb::_include('functions_admin', 'move_topics');
+	
+	$revision = $queue_object->get_revision();
+	$revision->load_phpbb_versions();
+	$branch = (int) $revision->phpbb_versions[0]['phpbb_version_branch'];
 
-	move_topics($row['phpbb_topic_id'], phpbb_com_forum_id($row['topic_category'], 'trash'));
+	move_topics($row['phpbb_topic_id'], phpbb_fr_forum_id($row['topic_category'], 'trash', $branch));
 }
 
-function phpbb_com_forum_id($type, $mode)
+// Display a warning for styles not meeting the licensing guidelines
+function phpbb_fr_titania_contribution_assign_details($hook, &$vars, $contrib)
 {
-	if (defined('TEST_INSTALLATION'))
+	if ($contrib->contrib_type != TITANIA_TYPE_STYLE || empty($contrib->download))
 	{
-		return 2;
+		return;
 	}
 
-	switch ($type)
+	foreach ($contrib->download as $download)
 	{
-		case TITANIA_TYPE_EXTENSION :
-			switch ($mode)
+		if ($download['revision_license'] == '')
+		{
+			if (isset($vars['WARNING']))
 			{
-				case TITANIA_QUEUE_DISCUSSION :
-					return 516;
-				break;
-
-				case TITANIA_QUEUE :
-					return 511;
-				break;
-
-				case 'trash' :
-					return 521;
-				break;
+				$vars['WARNING'] .= '<br />';
 			}
-		break;
-
-		case TITANIA_TYPE_MOD :
-			switch ($mode)
+			else
 			{
-				case TITANIA_QUEUE_DISCUSSION :
-					return 61;
-				break;
-
-				case TITANIA_QUEUE :
-					return 38;
-				break;
-
-				case 'trash' :
-					return 28;
-				break;
+				$vars['WARNING'] = '';
 			}
-		break;
 
-		case TITANIA_TYPE_STYLE :
-			switch ($mode)
-			{
-				case TITANIA_QUEUE_DISCUSSION :
-					return 87;
-				break;
+			$vars['WARNING'] .= 'WARNING: This style currently does not meet our licensing guidelines.';
 
-				case TITANIA_QUEUE :
-					return 40;
-				break;
-
-				case 'trash' :
-					return 83;
-				break;
-			}
-		break;
+			break;
+		}
 	}
-
-	return false;
 }
 
-function phpbb_com_handle_attachments($post, &$post_text)
+function phpbb_fr_handle_attachments($post, &$post_text)
 {
 	if (!$post->post_attachment)
 	{
