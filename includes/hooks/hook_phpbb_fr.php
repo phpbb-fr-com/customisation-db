@@ -32,7 +32,7 @@ titania::$hook->register_ary('phpbb_fr_', array(
 	array('titania_queue', 'deny'),
 	array('titania_queue', 'close'),
 	array('titania_queue', 'delete'),
-	array('titania_contribution', 'assign_details'),
+	//array('titania_contribution', 'assign_details'),
 ));
 
 function phpbb_fr_forum_id($type, $mode, $branch)
