@@ -218,6 +218,16 @@ services:
         tags:
             - { name: event.listener }
 
+    phpbb.titania.phpbb_fr_listener:
+        class: phpbb\titania\event\phpbb_fr_listener
+        arguments:
+            - @user
+            - @template
+            - @phpbb.titania.controller.helper
+            - @phpbb.titania.config
+        tags:
+            - { name: event.listener }
+
     phpbb.titania.manage.tool.composer.rebuild_repo:
         class: phpbb\titania\manage\tool\composer\rebuild_repo
         arguments:
