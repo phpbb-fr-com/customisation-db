@@ -129,6 +129,16 @@ services:
         tags:
             - { name: event.listener }
 
+    phpbb.titania.phpbb_fr_listener:
+        class: phpbb\titania\event\phpbb_fr_listener
+        arguments:
+            - @user
+            - @template
+            - @phpbb.titania.controller.helper
+            - @phpbb.titania.config
+        tags:
+            - { name: event.listener }
+
     phpbb.titania.message:
         class: phpbb\titania\message\message
         scope: prototype
