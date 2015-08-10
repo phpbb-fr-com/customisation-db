@@ -72,10 +72,10 @@ class phpbb_fr_listener implements EventSubscriberInterface
 	 */
 	protected function get_real_url($url)
 	{
-		if ($this->ext_config->titania_script_path)
+		if (!defined('IN_TITANIA_CONTROLLER') && $this->ext_config->titania_script_path)
 		{
 			return generate_board_url(true) .'/'. rtrim($this->ext_config->titania_script_path, '/') .
-			substr($url, strlen(generate_board_url()));
+				substr($url, strlen(generate_board_url()));
 		}
 		return $url;
 	}
