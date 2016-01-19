@@ -74,8 +74,27 @@ class phpbb_fr_listener implements EventSubscriberInterface
 	{
 		if (!defined('IN_TITANIA_CONTROLLER') && $this->ext_config->titania_script_path)
 		{
-			return generate_board_url(true) .'/'. rtrim($this->ext_config->titania_script_path, '/') .
-				substr($url, strlen(generate_board_url()));
+			$domain = generate_board_url(true);
+			$board_url = generate_board_url();
+
+			if (strpos($board_url, $domain) !== 0)
+			{
+				$board_url = $domain . $board_url;
+			}
+			if (strpos($url, $domain) !== 0)
+			{
+				$url = $domain . $url;
+			}
+			if (strpos($url, $board_url) === 0)
+			{
+				$uri = substr($url, strlen($board_url));
+			}
+			else
+			{
+				$uri = substr($url, strlen($domain));
+			}
+
+			return $domain . str_replace('//', '/', '/' . rtrim($this->ext_config->titania_script_path, '/') . $uri);
 		}
 		return $url;
 	}
