@@ -1,11 +1,11 @@
 /config.php
-store/*
-files/*
+/store/*
+/files/*
 Thumbs.db
 .DS_Store
 *.bak
-files/revisions/*
-files/screenshots/*
+/files/revisions/*
+/files/screenshots/*
 composer_packages/*
 vendor
 .idea/*
