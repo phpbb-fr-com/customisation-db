@@ -49,8 +49,9 @@ class config extends \phpbb\titania\entity\base
 	public function set_default_config()
 	{
 		$this->object_config = array_merge($this->object_config, array(
-			'phpbb_script_path'			=> array('default' => 'community/'),
-			'titania_script_path'		=> array('default' => 'customisation/'),
+			'phpbb_root_path'			=> array('default' => '../../forums/'),
+			'phpbb_script_path'			=> array('default' => 'forums/'),
+			'titania_script_path'		=> array('default' => 'customise/'),
 			'upload_path'				=> array('default' => $this->ext_root_path . 'files/'),
 			'contrib_temp_path'			=> array('default' => $this->ext_root_path . 'files/contrib_temp/'),
 			'language_path'				=> array('default' => $this->ext_root_path . 'language/'),
@@ -136,7 +137,7 @@ class config extends \phpbb\titania\entity\base
 			'search_enabled'			=> array('default' => true),
 
 			// Search backend (zend or solr (if solr, set the correct ip/port))
-			'search_backend'			=> array('default' => 'solr'),
+			'search_backend'			=> array('default' => 'fulltext_sphinx'),
 			'search_backend_ip'			=> array('default' => 'localhost'),
 			'search_backend_port'		=> array('default' => 8983),
 
@@ -226,7 +227,7 @@ class config extends \phpbb\titania\entity\base
 			)),
 
 			// Remove unsubmitted revisions and attachments
-			'cleanup_titania'				=> array('default' => false),
+			'cleanup_titania'				=> array('default' => true),
 		));
 	}
 
