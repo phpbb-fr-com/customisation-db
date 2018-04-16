@@ -23,45 +23,6 @@ use phpbb\titania\ext;
 
 $config = array(
 	/**
-	* phpBB versions array
-	*
-	* @param array(
-	*	(release branch) => array(
-	*		'latest_revision' => (revision number)
-	* 		'allow_uploads' => (allow submission of revisions for this version of phpBB?),
-	*	),
-	* ),
-	*/
-	'phpbb_versions' => array(
-		'20'	=> array('latest_revision' => '23', 'name' => 'phpBB 2.0.x', 'allow_uploads' => false),
-		'30'	=> array('latest_revision' => '14', 'name' => 'phpBB 3.0.x', 'allow_uploads' => false),
-		'31'	=> array('latest_revision' => '12', 'name' => 'phpBB 3.1.x', 'allow_uploads' => false),
-		'32'	=> array('latest_revision' => '2', 'name' => 'phpBB 3.2.x', 'allow_uploads' => true),
-	),
-
-	/**
-	* Relative path from the server root (generate_board_url(true))
-	*
-	* @param	string	Path to the phpBB folder
-	*/
-	'phpbb_script_path' => 'phpBB/',
-
-	/**
-	* Relative path from the server root (generate_board_url(true))
-	*
-	* @param	string	Path to the titania folder
-	*/
-	'titania_script_path' => 'customisation/',
-
-	/**
-	* Prefix of the sql tables.  Not the prefix for the phpBB tables, prefix for the Titania tables only.
-	* This MUST NOT be the same as the phpBB prefix!
-	*
-	* @param	string	$titania_table_prefix	Table prefix
-	*/
-	'table_prefix' => 'cdb_',
-
-	/**
 	* Path to the style demo board you would like styles to be installed on upon validation
 	* (there is a checkbox option for styles to be installed on the demo board when approving)
 	*
@@ -70,6 +31,7 @@ $config = array(
 	'demo_style_path' => array(
 		'30'	=> false,
 		'31'	=> false,
+		'32'	=> false,
 	),
 
 	/**
@@ -81,6 +43,13 @@ $config = array(
 	'demo_style_url' => array(
 		'30'	=> false,
 		'31'	=> false,
+		'32'	=> false,
+	),
+	
+	'demo_style_hook' => array(
+		'30'	=> false,
+		'31'	=> false,
+		'32'	=> false,
 	),
 
 	/**
@@ -96,19 +65,24 @@ $config = array(
 	/**
 	* IDs of database forum
 	*/
-	'forum_mod_database'		=> 0,
-	'forum_style_database'		=> 0,
-	'forum_converter_database'	=> 0,
-	'forum_bbcode_database'		=> 0,
-	'forum_extension_database'	=> 0,
+	'forum_mod_database'		=> array(
+		'30'	=> 0,
+	),
+	'forum_style_database'		=> array(
+		'30'	=> 0,
+		'31'	=> 0,
+		'32'	=> 0,
+	),
+	'forum_extension_database'	=> array(
+		'31'	=> 0,
+		'32'	=> 0,
+	),
 
 	/**
 	* IDs of account used for topic/post release in database forum
 	*/
 	'forum_mod_robot'		=> 0,
 	'forum_style_robot'		=> 0,
-	'forum_converter_robot' => 0,
-	'forum_bbcode_robot'	=> 0,
 	'forum_extension_robot'	=> 0,
 
 	/**

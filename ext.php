@@ -92,4 +92,28 @@ class ext extends \phpbb\extension\base
 	const TITANIA_ATTENTION_CATS_CHANGED = 3;
 	const TITANIA_ATTENTION_DESC_CHANGED = 4;
 	const TITANIA_ATTENTION_NAME_CHANGED = 5;
+	
+	public function enable_step($old_state)
+	{
+		if ($old_state === false)
+		{
+			$dir = $this->container->getParameter('core.root_path') . 'store/ext/phpbb/titania/files/';
+
+			if (!file_exists($dir))
+			{
+				if (!@mkdir($dir, 0777, true))
+				{
+					/** @var \phpbb\language\language $language Language object */
+					$language = $this->container->get('language');
+					$language->add_lang('error','phpbbfr/website');
+					throw new \phpbb\extension\exception($language->lang('CANT_CREATE_DIRECTORY', $dir));
+				}
+			}
+			/** @var \phpbb\filesystem\filesystem $phpbb_filesystem phpBB Filesystem object */
+			$phpbb_filesystem = $this->container->get('filesystem');
+			$phpbb_filesystem->phpbb_chmod($dir, CHMOD_READ | CHMOD_WRITE);
+		}
+
+		return parent::enable_step($old_state);
+	}
 }

@@ -132,6 +132,7 @@ services:
         class: phpbb\titania\config\config
         arguments:
             - '@config'
+            - '%core.root_path%'
             - '%phpbb.titania.root_path%'
             - '%core.php_ext%'
 

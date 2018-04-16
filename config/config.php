@@ -33,9 +33,10 @@ class config extends \phpbb\titania\entity\base
 	 * @param string $ext_root_path
 	 * @param string $php_ext
 	 */
-	public function __construct(\phpbb\config\config $config, $ext_root_path, $php_ext)
+	public function __construct(\phpbb\config\config $config, $phpbb_root_path, $ext_root_path, $php_ext)
 	{
 		$this->config = $config;
+		$this->phpbb_root_path = $phpbb_root_path;
 		$this->ext_root_path = $ext_root_path;
 		$this->php_ext = $php_ext;
 
@@ -52,8 +53,8 @@ class config extends \phpbb\titania\entity\base
 			'phpbb_root_path'			=> array('default' => '../../forums/'),
 			'phpbb_script_path'			=> array('default' => 'forums/'),
 			'titania_script_path'		=> array('default' => 'customise/'),
-			'upload_path'				=> array('default' => $this->ext_root_path . 'files/'),
-			'contrib_temp_path'			=> array('default' => $this->ext_root_path . 'files/contrib_temp/'),
+			'upload_path'				=> array('default' => $this->phpbb_root_path . 'store/ext/phpbb/titania/files/'),
+			'contrib_temp_path'			=> array('default' => $this->phpbb_root_path . 'store/ext/phpbb/titania/files/contrib_temp/'),
 			'language_path'				=> array('default' => $this->ext_root_path . 'language/'),
 			'table_prefix'				=> array('default' => 'cdb_'),
 
