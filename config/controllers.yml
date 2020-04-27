@@ -3,6 +3,7 @@ services:
         class: phpbb\titania\controller\index
         arguments:
             - '@auth'
+            - '@config'
             - '@template'
             - '@user'
             - '@phpbb.titania.controller.helper'
@@ -132,6 +133,7 @@ services:
             - '@phpbb.titania.access'
             - '@phpbb.titania.tracking'
             - '@phpbb.titania.subscriptions'
+            - '@path_helper'
 
     phpbb.titania.controller.contrib.support:
         class: phpbb\titania\controller\contribution\support
@@ -380,6 +382,23 @@ services:
             - '@user'
             - '@phpbb.titania.controller.helper'
             - '@phpbb.titania.display'
+
+    phpbb.titania.controller.manage.config_settings:
+        class: phpbb\titania\controller\manage\config_settings
+        arguments:
+            - '@auth'
+            - '@config'
+            - '@dbal.conn'
+            - '@template'
+            - '@user'
+            - '@phpbb.titania.cache'
+            - '@phpbb.titania.controller.helper'
+            - '@phpbb.titania.contribution.type.collection'
+            - '@request'
+            - '@phpbb.titania.config'
+            - '@phpbb.titania.display'
+            - '@phpbb.titania.message'
+            - '@group_helper'
 
     phpbb.titania.controller.manage.contrib.update_release_topics:
         calls:

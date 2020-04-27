@@ -127,10 +127,9 @@ class demo
 			{
 				require($this->phpbb_root_path . 'includes/message_parser.' . $this->php_ext);
 			}
-			$this->message_parser = new \parse_message;
+			$this->message_parser = new \parse_message($message);
 		}
 
-		$this->message_parser->parse_message($message);
 		$this->bbcode_data['regexp'] = array(
 			$this->bbcode_data['first_pass_match'] => str_replace(
 				'$uid',
@@ -173,7 +172,13 @@ class demo
 
 		$bbcode_tpl = (!empty($this->bbcode_data['second_pass_replace'])) ? $this->bbcode_data['second_pass_replace'] : $this->bbcode_data['bbcode_tpl'];
 		// Handle language variables
-		$bbcode_tpl = preg_replace('/{L_([A-Z_]+)}/e', "(!empty(phpbb::\$user->lang['\$1'])) ? phpbb::\$user->lang['\$1'] : ucwords(strtolower(str_replace('_', ' ', '\$1')))", $bbcode_tpl);
+		$bbcode_tpl = preg_replace_callback(
+			'/{L_([A-Z_]+)}/',
+			function ($matches) {
+				return (!empty(\phpbb::$user->lang[$matches[1]])) ? \phpbb::$user->lang[$matches[1]] : ucwords(strtolower(str_replace('_', ' ', $matches[1])));
+			},
+			$bbcode_tpl
+		);
 
 		if ($this->bbcode_data['second_pass_replace'])
 		{

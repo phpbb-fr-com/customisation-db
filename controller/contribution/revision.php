@@ -50,6 +50,9 @@ class revision extends base
 	/** @var array */
 	protected $repackable_branches;
 
+	/** @var bool */
+	private $skip_epv = false;
+
 	/**
 	 * Constructor
 	 *
@@ -209,6 +212,22 @@ class revision extends base
 	{
 		$this->setup($contrib_type, $contrib);
 
+		$settings = array();
+
+		// Load the revisions for this contribution
+		$this->contrib->get_revisions();
+
+		if (sizeof($this->contrib->revisions))
+		{
+			// Find out what the previous revision was, if this is a new revision to an existing contribution
+			$previous_revision_id = max(array_keys($this->contrib->revisions));
+
+			// Load up that revision to get the selected branches
+			$previous_revision = new \titania_revision($this->contrib, $previous_revision_id);
+			$previous_revision->load_phpbb_versions();
+			$settings['vendor_versions'] = $previous_revision->get_selected_branches();
+		}
+
 		if (!$this->check_auth())
 		{
 			return $this->helper->needs_auth();
@@ -227,6 +246,7 @@ class revision extends base
 			$message = $this->get_message();
 			$message->display();
 		}
+
 		$error = array();
 
 		if ($this->request->is_set_post('new_revision'))
@@ -278,9 +298,14 @@ class revision extends base
 			$this->cancel();
 		}
 
-		$this->assign_common_vars($error, !empty($this->id));
+		$this->skip_epv = $this->auth->acl_get('u_titania_mod_extension_validate') && $this->request->variable('skip_epv', false);
+		$can_skip_epv = $this->auth->acl_get('u_titania_mod_extension_validate') && $this->contrib->type instanceof \phpbb\titania\contribution\extension\type;
+
+		$this->assign_common_vars($error, !empty($this->id), $settings);
 		$this->template->assign_vars(array(
 			'S_CAN_SUBSCRIBE'			=> !$this->is_author_subscribed() && $this->use_queue,
+			'S_CAN_SKIP_EPV'			=> $can_skip_epv,
+			'SKIP_EPV'					=> (int) $this->skip_epv,
 			'SUBSCRIBE_AUTHOR'			=> $this->request->variable('subscribe_author', false),
 			'S_POST_ACTION'				=> $this->contrib->get_url('revision'),
 		));
@@ -719,6 +744,9 @@ class revision extends base
 
 		$step = $steps[$step_num];
 
+		// Check if we are to skip the EPV
+		$this->skip_epv = $this->auth->acl_get('u_titania_mod_extension_validate') && $this->request->variable('skip_epv', false);
+
 		if ($this->attachment)
 		{
 			if (!$this->package->get_source())
@@ -761,6 +789,11 @@ class revision extends base
 	protected function run_step($function)
 	{
 		$download_url = ($this->attachment) ? $this->attachment->get_url() : '';
+
+		if ($this->skip_epv)
+		{
+			$this->revision->skip_epv = true;
+		}
 
 		return call_user_func_array($function, array(
 			$this->contrib,
