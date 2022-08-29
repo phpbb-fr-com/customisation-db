@@ -165,7 +165,7 @@ class users_overlord
 		}
 
 		// Special things...
-		if ($field[0] == '_')
+		if (!empty($field[0]) && $field[0] === '_')
 		{
 			switch ($field)
 			{
